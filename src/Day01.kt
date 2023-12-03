@@ -36,4 +36,4 @@ val spelledDigitsToNumbers = mapOf(
         "nine" to 9
 )
 
-val numberRegex = """(?=(\d|one|two|three|four|five|six|seven|eight|nine))""".toRegex()
+private val numberRegex = """(?=(\d|one|two|three|four|five|six|seven|eight|nine))""".toRegex()
