@@ -2,15 +2,15 @@ fun main() {
     val cards = readInput("Day04")
             .map { parseCard(it) }
 
-    val countsByNum = cards.associate { it.num to 1 }.toMutableMap()
+    val countsByCardNum = cards.associate { it.num to 1 }.toMutableMap()
     cards.forEachIndexed{ index, card ->
-        repeat(countsByNum[index + 1]!!) {
+        repeat(countsByCardNum[index + 1]!!) {
             for (i in index + 1 until index + 1 + card.winningPlayedNumbers.size) {
-                countsByNum[i + 1] = countsByNum[i + 1]!! + 1
+                countsByCardNum[i + 1] = countsByCardNum[i + 1]!! + 1
             }
         }
     }
-    val result = countsByNum.values.sum()
+    val result = countsByCardNum.values.sum()
     result.println()
 }
 
