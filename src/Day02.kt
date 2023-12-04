@@ -5,15 +5,15 @@ fun main() {
     println(result)
 }
 
-internal fun parseGame(line: String): Game {
+private fun parseGame(line: String): Game_ {
     val colonIndex = line.indexOf(':')
 
     val num = line.substring(5, colonIndex).toInt()
     val rounds = line.substring(colonIndex + 1).split("; ").map { parseRound(it) }
-    return Game(num, rounds)
+    return Game_(num, rounds)
 }
 
-internal fun parseRound(roundText: String): CubeCounts {
+private fun parseRound(roundText: String): CubeCounts {
     val countsMap = mutableMapOf<String, Int>()
     roundText.split(", ").forEach {
         roundRegex.findAll(it).forEach { matchResult -> countsMap[matchResult.groupValues[2]] = matchResult.groupValues[1].toInt() }
@@ -23,13 +23,13 @@ internal fun parseRound(roundText: String): CubeCounts {
 
 val roundRegex = """(\d+) (red|green|blue)""".toRegex()
 
-internal data class Game(val num: Int, val rounds: List<CubeCounts>) {
+private data class Game_(val num: Int, val rounds: List<CubeCounts>) {
     fun calculateMinNecessaryCubeCounts(): CubeCounts {
         return rounds.fold(CubeCounts(0, 0, 0)) { acc, next -> acc.coerceAtLeast(next) }
     }
 }
 
-internal data class CubeCounts(val reds: Int, val greens: Int, val blues: Int) {
+private data class CubeCounts(val reds: Int, val greens: Int, val blues: Int) {
     fun power(): Int {
         return reds * greens * blues
     }
