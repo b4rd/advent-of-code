@@ -2,28 +2,32 @@ fun main() {
     val map = readInput("Day10").map { line ->
         line.map { Pipe.fromSymbol(it) }
     }
+    val mapWidth = map[0].size
 
-    var startCoordinates = Coordinates(0, 0, Pipe.START)
+    var startCoordinates = Position(0, 0, Pipe.START)
     for ((index, pipesInRow) in map.withIndex()) {
         val startIndex = pipesInRow.indexOf(Pipe.START)
         if (startIndex >= 0) {
-            startCoordinates = Coordinates(startIndex, index, Pipe.START)
+            startCoordinates = Position(startIndex, index, Pipe.START)
             break
         }
     }
 
     var currentRoutes = listOf(listOf(startCoordinates))
+    var mainLoop = listOf<Position>()
     label@ while (true) {
-        val nextRoutes = mutableListOf<List<Coordinates>>()
+        val nextRoutes = mutableListOf<List<Position>>()
         for (route in currentRoutes) {
             val prevCoordinates = if (route.size >= 2) route[route.size - 2] else null
             val currentCoordinates = route.last()
-            val nextCoordinates = findNextCoordinates(map, currentCoordinates, prevCoordinates)
-            if (nextCoordinates.any { nextCoordinates -> currentRoutes.any { coords -> coords.any { nextCoordinates == it } } }) {
+            val nextCoordinates = findNextPositions(map, currentCoordinates, prevCoordinates)
+            val intersectingRoute = currentRoutes.find { it.any { coordinates -> nextCoordinates.any { nc -> nc == coordinates} }}
+            if (intersectingRoute != null) {
+                mainLoop = (route + intersectingRoute.reversed()).distinct()
                 break@label
             }
             for (nextCoordinate in nextCoordinates) {
-                val newRoute = mutableListOf<Coordinates>()
+                val newRoute = mutableListOf<Position>()
                 newRoute += route
                 newRoute += nextCoordinate
                 nextRoutes += newRoute
@@ -31,36 +35,56 @@ fun main() {
         }
         currentRoutes = nextRoutes
     }
-    currentRoutes.forEach {
-        it.println()
+
+    val result = mutableListOf<Position>()
+    map.forEachIndexed { y, pipes ->
+        pipes.forEachIndexed { x, pipe ->
+            val position = Position(x, y, pipe)
+            if (position !in mainLoop && countIntersections(position, mainLoop, mapWidth) % 2 == 1) {
+                result += position
+            }
+        }
     }
-    (currentRoutes.maxBy { it.size }.size - 1).println()
+    result.println()
+    result.size.println()
 }
 
-private fun findNextCoordinates(map: List<List<Pipe>>, currentCoordinates: Coordinates, prevCoordinates: Coordinates?): List<Coordinates> {
-    val nextCoordinates = mutableListOf<Coordinates>()
-    for (entry in currentCoordinates.pipe.possibleDirections) {
-        var nextCoordinate: Coordinates? = null
+private val pipesToIgnore = setOf(Pipe.HORIZONTAL, Pipe.TOP_LEFT, Pipe.TOP_RIGHT)
+
+private fun countIntersections(position: Position, loop: List<Position>, mapWidth: Int): Int {
+    var count = 0
+    for (x in position.x + 1..< mapWidth) {
+        if (loop.any { it.x == x && it.y == position.y && it.pipe !in pipesToIgnore}) {
+            count++
+        }
+    }
+    return count
+}
+
+private fun findNextPositions(map: List<List<Pipe>>, currentPosition: Position, prevPosition: Position?): List<Position> {
+    val nextCoordinates = mutableListOf<Position>()
+    for (entry in currentPosition.pipe.possibleDirections) {
+        var nextCoordinate: Position? = null
         when(entry) {
             Direction_.LEFT -> {
-                if (currentCoordinates.x >= 1) {
-                    val pipe = map[currentCoordinates.y][currentCoordinates.x - 1]
-                    nextCoordinate = Coordinates(currentCoordinates.x - 1, currentCoordinates.y, pipe)
+                if (currentPosition.x >= 1) {
+                    val pipe = map[currentPosition.y][currentPosition.x - 1]
+                    nextCoordinate = Position(currentPosition.x - 1, currentPosition.y, pipe)
                 }
             }
             Direction_.RIGHT -> {
-                if (currentCoordinates.x <= map[0].size - 2) {
-                    nextCoordinate = Coordinates(currentCoordinates.x + 1, currentCoordinates.y, map[currentCoordinates.y][currentCoordinates.x + 1])
+                if (currentPosition.x <= map[0].size - 2) {
+                    nextCoordinate = Position(currentPosition.x + 1, currentPosition.y, map[currentPosition.y][currentPosition.x + 1])
                 }
             }
             Direction_.TOP -> {
-                if (currentCoordinates.y >= 1) {
-                    nextCoordinate = Coordinates(currentCoordinates.x , currentCoordinates.y - 1, map[currentCoordinates.y - 1][currentCoordinates.x])
+                if (currentPosition.y >= 1) {
+                    nextCoordinate = Position(currentPosition.x , currentPosition.y - 1, map[currentPosition.y - 1][currentPosition.x])
                 }
             }
             Direction_.BOTTOM -> {
-                if (currentCoordinates.y <= map.size - 2) {
-                    nextCoordinate = Coordinates(currentCoordinates.x , currentCoordinates.y + 1, map[currentCoordinates.y + 1][currentCoordinates.x])
+                if (currentPosition.y <= map.size - 2) {
+                    nextCoordinate = Position(currentPosition.x , currentPosition.y + 1, map[currentPosition.y + 1][currentPosition.x])
                 }
             }
         }
@@ -68,10 +92,10 @@ private fun findNextCoordinates(map: List<List<Pipe>>, currentCoordinates: Coord
             nextCoordinates += nextCoordinate
         }
     }
-    return nextCoordinates.filter { it != prevCoordinates }
+    return nextCoordinates.filter { it != prevPosition }
 }
 
-private data class Coordinates(val x: Int, val y: Int, val pipe: Pipe)
+private data class Position(val x: Int, val y: Int, val pipe: Pipe)
 
 private enum class Direction_ {
     LEFT,
