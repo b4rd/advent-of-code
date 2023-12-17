@@ -1,12 +1,37 @@
 fun main() {
-    val map = readInput("Day16_test")
-    val starterBeam = Beam(Position__(0, 0), Direction__.RIGHT)
+    val map = readInput("Day16")
+//    val starterBeam = Beam(Position__(0, 0), Direction__.RIGHT)
 
+    var max = 0
+    for (i in listOf(0, map.size - 1)) {
+        val line = map[i];
+        line.forEachIndexed { x, c ->
+            val starterBeam = Beam(Position__(x, i), if (i == 0) Direction__.BOTTOM else Direction__.TOP)
+            max = max.coerceAtLeast(findEnergizedBeams(starterBeam, map))
+        }
+    }
+
+    map.forEachIndexed { y: Int, line: String ->
+        for (x in listOf(0, map[0].length - 1)) {
+            val starterBeam = Beam(Position__(x, y), if (x == 0) Direction__.RIGHT else Direction__.LEFT)
+            max = max.coerceAtLeast(findEnergizedBeams(starterBeam, map))
+        }
+    }
+
+    max.println()
+
+}
+
+private fun findEnergizedBeams(starterBeam: Beam, map: List<String>): Int {
     var currentBeams = listOf(starterBeam)
-
-    val energizedCells = mutableSetOf(starterBeam.pos)
+    val energizedCells = mutableSetOf(starterBeam)
     do {
         val newBeams = mutableListOf<Beam>()
+        fun addBeam(b: Beam) {
+            if (b !in energizedCells) {
+                newBeams += b
+            }
+        }
         for (beam in currentBeams) {
             val (position, direction) = beam
             val nextPosition = position.next(direction)
@@ -16,29 +41,49 @@ fun main() {
                 Empty -> newBeams += Beam(nextPosition, direction)
                 is Mirror -> {
                     val newDirection = nextCell.newDirection(direction)
-                    newBeams += Beam(nextPosition, newDirection)
+                    addBeam(Beam(nextPosition, newDirection))
                 }
+
                 is Splitter -> {
                     if (nextCell.isHorizontal && !direction.isHorizontal) {
-                        newBeams += Beam(nextPosition, Direction__.LEFT)
-                        newBeams += Beam(nextPosition, Direction__.RIGHT)
+                        addBeam(Beam(nextPosition, Direction__.LEFT))
+                        addBeam(Beam(nextPosition, Direction__.RIGHT))
                     } else if (!nextCell.isHorizontal && direction.isHorizontal) {
-                        newBeams += Beam(nextPosition, Direction__.TOP)
-                        newBeams += Beam(nextPosition, Direction__.BOTTOM)
+                        addBeam(Beam(nextPosition, Direction__.TOP))
+                        addBeam(Beam(nextPosition, Direction__.BOTTOM))
                     } else {
-                        newBeams += Beam(nextPosition, direction)
+                        addBeam(Beam(nextPosition, direction))
                     }
                 }
+
                 null -> {}
             }
         }
-
-        energizedCells += newBeams.map { it.pos }
+        energizedCells += newBeams
         currentBeams = newBeams
+//        printMap(map, newBeams)
+        println()
+        println()
+        println()
     } while (newBeams.isNotEmpty())
 
     energizedCells.println()
-    energizedCells.size.println()
+    return energizedCells.map { it.pos }.toSet().size
+}
+
+const val ANSI_RED_BACKGROUND = "\u001B[41m"
+const val ANSI_RESET = "\u001B[0m"
+const val ANSI_RED = "\u001B[31m"
+
+private fun printMap(map: List<String>, currentBeams: List<Beam>) {
+    map.forEachIndexed { y, s ->
+        s.forEachIndexed { x, c ->
+            currentBeams.firstOrNull { it.pos.x == x && it.pos.y == y }?.let{
+                print(ANSI_RED_BACKGROUND + it.direction.symbol + ANSI_RESET)
+            } ?: print(c)
+        }
+        println()
+    }
 }
 
 private fun getCell(map: List<String>, pos: Position__): Cell? {
@@ -91,11 +136,11 @@ private data class Position__(val x: Int, val y: Int){
         }
     }
 }
-private enum class Direction__(val isHorizontal: Boolean) {
-    TOP(false),
-    RIGHT(true),
-    BOTTOM(false),
-    LEFT(true)
+private enum class Direction__(val isHorizontal: Boolean, val symbol: Char) {
+    TOP(false, '^'),
+    RIGHT(true, '>'),
+    BOTTOM(false, 'v'),
+    LEFT(true,'<')
 }
 
 private data class Beam(val pos: Position__, val direction: Direction__)
